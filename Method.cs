@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Configuration;
 
 namespace 车辆轨迹数据处理 {
     class Method {
@@ -114,7 +115,7 @@ namespace 车辆轨迹数据处理 {
                     Approach = lines[3]
                 };
                 if (lines.Length < 10 | (lines.Length - 4) / 2 != 0) {
-                    string message = string.Format("不能连接成闭合区域！\r\n{0}", line);
+                    string message = string.Format("不能形成成闭合区域！\r\n{0}", line);
                     MessageBox.Show(message, "系统提示", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
                     return;
                 }
@@ -153,7 +154,7 @@ namespace 车辆轨迹数据处理 {
                 try {
                     // step1:
                     string[] lines = line.Split(PublicVariate.Separator);
-                    Int64 time = Convert.ToInt64(lines[1]);
+                    long time = Convert.ToInt64(lines[1]);
                     string crossID = lines[2];
                     string trackID = lines[5];
                     string carType = lines[9];
@@ -195,8 +196,7 @@ namespace 车辆轨迹数据处理 {
                     }
 
                     foreach (PublicVariate.VirtualCoil virtualCoil in publicVariate.VirtualCoils) {
-                        if (crossID == virtualCoil.CrossName &
-                            virtualCoil.Approach.Contains(lantype) &
+                        if (crossID == virtualCoil.CrossName & virtualCoil.Approach.Contains(lantype) &
                             virtualCoil.Polygon.IsVisible(x, y)) {
                             car.ExTime = time;
                             car.ExRoad = virtualCoil.Approach;
@@ -218,5 +218,52 @@ namespace 车辆轨迹数据处理 {
         public void StatisticParkingTimes() {
 
         }
+
+        // 增加、读取、修改、判断系统配置文件
+        #region
+        public void AddItem(string keyName, string keyValue) {
+            //添加配置文件的项，键为keyName，值为keyValue
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings.Add(keyName, keyValue);
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
+        public bool ExistItem(string keyName) {
+            //判断配置文件中是否存在键为keyName的项
+            foreach (string key in ConfigurationManager.AppSettings) {
+                if (key == keyName) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public string ValueOfItem(string keyName) {
+            //返回配置文件中键为keyName的项的值
+            return ConfigurationManager.AppSettings[keyName];
+        }
+
+        public void ModifyItem(string keyName, string newKeyValue) {
+            //修改配置文件中键为keyName的项的值
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings[keyName].Value = newKeyValue;
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
+        public void RemoveItem(string keyName) {
+            //删除配置文件键为keyName的项
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings.Remove(keyName);
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
+        public static T GetSection<T>(string name) where T : ConfigurationSection {
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            return config.GetSection(name) as T;
+        }
+        #endregion
     }
 }
